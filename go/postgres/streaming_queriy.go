@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mysql
+package postgees
 
 import (
 	"vitess.io/vitess/go/sqltypes"
@@ -35,7 +35,8 @@ func (c *Conn) ExecuteStreamFetch(query string) (err error) {
 
 	// Sanity check.
 	if c.fields != nil {
-		return NewSQLError(CRCommandsOutOfSync, SSUnknownSQLState, "streaming query already in progress")
+		return NewSQ
+		LError(CRCommandsOutOfSync, SSUnknownSQLState, "streaming query already in progress")
 	}
 
 	// Send the query as a COM_QUERY packet.

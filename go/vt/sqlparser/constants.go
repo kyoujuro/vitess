@@ -147,7 +147,9 @@ const (
 	// ConvertType.Operator
 	CharacterSetStr = " character set"
 	NoOperatorStr   = ""
-	CharsetStr      = "charset"
+
+	// CollateAndCharset.Type
+	CollateStr = " collate"
 
 	// MatchExpr.Option
 	NoOptionStr                              = ""
@@ -185,6 +187,24 @@ const (
 	VitessStr      = "vitess"
 	TraditionalStr = "traditional"
 	AnalyzeStr     = "analyze"
+
+	// Lock Types
+	ReadStr             = "read"
+	ReadLocalStr        = "read local"
+	WriteStr            = "write"
+	LowPriorityWriteStr = "low_priority write"
+
+	// ShowCommand Types
+	CharsetStr         = " charset"
+	CollationStr       = " collation"
+	DatabaseStr        = " databases"
+	FunctionStr        = " function status"
+	PrivilegeStr       = " privileges"
+	ProcedureStr       = " procedure status"
+	StatusGlobalStr    = " global status"
+	StatusSessionStr   = " status"
+	VariableGlobalStr  = " global variables"
+	VariableSessionStr = " variables"
 )
 
 // Constants for Enum type - AccessMode
@@ -201,24 +221,10 @@ const (
 	Serializable
 )
 
-// Constants for Union.Type
-const (
-	UnionBasic UnionType = iota
-	UnionAll
-	UnionDistinct
-)
-
 // Constants for Enum Type - Insert.Action
 const (
 	InsertAct InsertAction = iota
 	ReplaceAct
-)
-
-// Constants for Enum Type - DBDDL.Action
-const (
-	CreateDBDDLAction DBDDLAction = iota
-	AlterDBDDLAction
-	DropDBDDLAction
 )
 
 // Constants for Enum Type - DDL.Action
@@ -384,4 +390,34 @@ const (
 	IntoOutfile SelectIntoType = iota
 	IntoOutfileS3
 	IntoDumpfile
+)
+
+// Constant for Enum Type - CollateAndCharsetType
+const (
+	CollateType CollateAndCharsetType = iota
+	CharacterSetType
+)
+
+// LockType constants
+const (
+	UnknownLockType LockType = iota
+	Read
+	ReadLocal
+	Write
+	LowPriorityWrite
+)
+
+// ShowCommandType constants
+const (
+	UnknownCommandType ShowCommandType = iota
+	Charset
+	Collation
+	Database
+	Function
+	Privilege
+	Procedure
+	StatusGlobal
+	StatusSession
+	VariableGlobal
+	VariableSession
 )

@@ -99,7 +99,11 @@ type vcursorImpl struct {
 	vm                    VSchemaOperator
 }
 
-func (vc *vcursorImpl) ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.DDL) error {
+func (vc *vcursorImpl) GetKeyspace() string {
+	return vc.keyspace
+}
+
+func (vc *vcursorImpl) ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.AlterVschema) error {
 	srvVschema := vc.vm.GetCurrentSrvVschema()
 	if srvVschema == nil {
 		return vterrors.Errorf(vtrpcpb.Code_INTERNAL, "vschema not loaded")
@@ -203,10 +207,13 @@ func (vc *vcursorImpl) SetContextTimeout(timeout time.Duration) context.CancelFu
 }
 
 // ErrorGroupCancellableContext updates context that can be cancelled.
-func (vc *vcursorImpl) ErrorGroupCancellableContext() *errgroup.Group {
+func (vc *vcursorImpl) ErrorGroupCancellableContext() (*errgroup.Group, func()) {
+	origCtx := vc.ctx
 	g, ctx := errgroup.WithContext(vc.ctx)
 	vc.ctx = ctx
-	return g
+	return g, func() {
+		vc.ctx = origCtx
+	}
 }
 
 // RecordWarning stores the given warning in the current session
@@ -268,7 +275,7 @@ func (vc *vcursorImpl) FindTableOrVindex(name sqlparser.TableName) (*vindexes.Ta
 // if there is one. If the keyspace specified in the target cannot be
 // identified, it returns an error.
 func (vc *vcursorImpl) DefaultKeyspace() (*vindexes.Keyspace, error) {
-	if vc.keyspace == "" {
+	if ignoreKeyspace(vc.keyspace) {
 		return nil, errNoKeyspace
 	}
 	ks, ok := vc.vschema.Keyspaces[vc.keyspace]
@@ -313,6 +320,27 @@ func (vc *vcursorImpl) FirstSortedKeyspace() (*vindexes.Keyspace, error) {
 	sort.Strings(keys)
 
 	return kss[keys[0]].Keyspace, nil
+}
+
+// SysVarSetEnabled implements the ContextVSchema interface
+func (vc *vcursorImpl) SysVarSetEnabled() bool {
+	return *sysVarSetEnabled
+}
+
+// KeyspaceExists provides whether the keyspace exists or not.
+func (vc *vcursorImpl) KeyspaceExists(ks string) bool {
+	return vc.vschema.Keyspaces[ks] != nil
+}
+
+func (vc *vcursorImpl) AllKeyspace() ([]*vindexes.Keyspace, error) {
+	if len(vc.vschema.Keyspaces) == 0 {
+		return nil, vterrors.New(vtrpcpb.Code_FAILED_PRECONDITION, "no keyspaces available")
+	}
+	var kss []*vindexes.Keyspace
+	for _, ks := range vc.vschema.Keyspaces {
+		kss = append(kss, ks.Keyspace)
+	}
+	return kss, nil
 }
 
 // TargetString returns the current TargetString of the session.
@@ -434,7 +462,7 @@ func (vc *vcursorImpl) SetTarget(target string) error {
 	if err != nil {
 		return err
 	}
-	if _, ok := vc.vschema.Keyspaces[keyspace]; keyspace != "" && !ok {
+	if _, ok := vc.vschema.Keyspaces[keyspace]; !ignoreKeyspace(keyspace) && !ok {
 		return mysql.NewSQLError(mysql.ERBadDb, mysql.SSSyntaxErrorOrAccessViolation, "Unknown database '%s'", keyspace)
 	}
 
@@ -443,6 +471,10 @@ func (vc *vcursorImpl) SetTarget(target string) error {
 	}
 	vc.safeSession.SetTargetString(target)
 	return nil
+}
+
+func ignoreKeyspace(keyspace string) bool {
+	return keyspace == "" || sqlparser.SystemSchema(keyspace)
 }
 
 func (vc *vcursorImpl) SetUDV(key string, value interface{}) error {
@@ -571,15 +603,20 @@ func (vc *vcursorImpl) SetWorkload(workload querypb.ExecuteOptions_Workload) {
 	vc.safeSession.GetOrCreateOptions().Workload = workload
 }
 
-// SysVarSetEnabled implements the SessionActions interface
-func (vc *vcursorImpl) SysVarSetEnabled() bool {
-	return *sysVarSetEnabled
-}
-
 // SetFoundRows implements the SessionActions interface
 func (vc *vcursorImpl) SetFoundRows(foundRows uint64) {
 	vc.safeSession.FoundRows = foundRows
 	vc.safeSession.foundRowsHandled = true
+}
+
+// SetReadAfterWriteGTID implements the SessionActions interface
+func (vc *vcursorImpl) SetDDLStrategy(strategy string) {
+	vc.safeSession.SetDDLStrategy(strategy)
+}
+
+// SetReadAfterWriteGTID implements the SessionActions interface
+func (vc *vcursorImpl) GetDDLStrategy() string {
+	return vc.safeSession.GetDDLStrategy()
 }
 
 // SetReadAfterWriteGTID implements the SessionActions interface

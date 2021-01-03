@@ -53,6 +53,7 @@ type (
 		// Context returns the context of the current request.
 		Context() context.Context
 
+		GetKeyspace() string
 		// MaxMemoryRows returns the maxMemoryRows flag value.
 		MaxMemoryRows() int
 
@@ -65,7 +66,7 @@ type (
 		SetContextTimeout(timeout time.Duration) context.CancelFunc
 
 		// ErrorGroupCancellableContext updates context that can be cancelled.
-		ErrorGroupCancellableContext() *errgroup.Group
+		ErrorGroupCancellableContext() (*errgroup.Group, func())
 
 		// V3 functions.
 		Execute(method string, query string, bindvars map[string]*querypb.BindVariable, rollbackOnError bool, co vtgatepb.CommitOrder) (*sqltypes.Result, error)
@@ -83,7 +84,7 @@ type (
 		// Will replace all of the Topo functions.
 		ResolveDestinations(keyspace string, ids []*querypb.Value, destinations []key.Destination) ([]*srvtopo.ResolvedShard, [][]*querypb.Value, error)
 
-		ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.DDL) error
+		ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.AlterVschema) error
 
 		SubmitOnlineDDL(onlineDDl *schema.OnlineDDL) error
 
@@ -125,6 +126,9 @@ type (
 		SetTransactionMode(vtgatepb.TransactionMode)
 		SetWorkload(querypb.ExecuteOptions_Workload)
 		SetFoundRows(uint64)
+
+		SetDDLStrategy(string)
+		GetDDLStrategy() string
 
 		// SetReadAfterWriteGTID sets the GTID that the user expects a replica to have caught up with before answering a query
 		SetReadAfterWriteGTID(string)

@@ -57,6 +57,14 @@ type noopVCursor struct {
 	ctx context.Context
 }
 
+func (t noopVCursor) SetDDLStrategy(strategy string) {
+	panic("implement me")
+}
+
+func (t noopVCursor) GetDDLStrategy() string {
+	panic("implement me")
+}
+
 func (t noopVCursor) SetReadAfterWriteGTID(s string) {
 	panic("implement me")
 }
@@ -108,7 +116,7 @@ func (t noopVCursor) ShardSession() []*srvtopo.ResolvedShard {
 	panic("implement me")
 }
 
-func (t noopVCursor) ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.DDL) error {
+func (t noopVCursor) ExecuteVSchema(keyspace string, vschemaDDL *sqlparser.AlterVschema) error {
 	panic("implement me")
 }
 
@@ -158,14 +166,18 @@ func (t noopVCursor) ExceedsMaxMemoryRows(numRows int) bool {
 	return !testIgnoreMaxMemoryRows && numRows > testMaxMemoryRows
 }
 
+func (t noopVCursor) GetKeyspace() string {
+	return ""
+}
+
 func (t noopVCursor) SetContextTimeout(timeout time.Duration) context.CancelFunc {
 	return func() {}
 }
 
-func (t noopVCursor) ErrorGroupCancellableContext() *errgroup.Group {
+func (t noopVCursor) ErrorGroupCancellableContext() (*errgroup.Group, func()) {
 	g, ctx := errgroup.WithContext(t.ctx)
 	t.ctx = ctx
-	return g
+	return g, func() {}
 }
 
 func (t noopVCursor) RecordWarning(warning *querypb.QueryWarning) {
@@ -269,7 +281,7 @@ func (f *loggingVCursor) ShardSession() []*srvtopo.ResolvedShard {
 	return nil
 }
 
-func (f *loggingVCursor) ExecuteVSchema(string, *sqlparser.DDL) error {
+func (f *loggingVCursor) ExecuteVSchema(string, *sqlparser.AlterVschema) error {
 	panic("implement me")
 }
 
@@ -290,8 +302,12 @@ func (f *loggingVCursor) SetContextTimeout(time.Duration) context.CancelFunc {
 	return func() {}
 }
 
-func (f *loggingVCursor) ErrorGroupCancellableContext() *errgroup.Group {
+func (f *loggingVCursor) ErrorGroupCancellableContext() (*errgroup.Group, func()) {
 	panic("implement me")
+}
+
+func (f *loggingVCursor) GetKeyspace() string {
+	return ""
 }
 
 func (f *loggingVCursor) RecordWarning(warning *querypb.QueryWarning) {
